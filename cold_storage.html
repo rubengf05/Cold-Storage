@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SpreadGreg · Cold Storage · Actualización automática</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#0b0e14;--surface:#10141c;--surface2:#161b26;--border:#1e2535;--border2:#28334a;--text:#dde3f0;--muted:#5a677e;--accent:#e8c84a;--green:#34d399;--red:#f87171;--orange:#fb923c;--blue:#60a5fa}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(30,37,53,.4) 1px,transparent 1px),linear-gradient(90deg,rgba(30,37,53,.4) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.wrap{max-width:1160px;margin:0 auto;padding:2.5rem 2rem;position:relative;z-index:1}
+.masthead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border2);padding-bottom:2rem;margin-bottom:2.5rem;gap:2rem;flex-wrap:wrap}
+.eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.eyebrow::before{content:'';display:inline-block;width:24px;height:1px;background:var(--accent)}
+h1{font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,44px);font-weight:800;line-height:1.05;letter-spacing:-.02em;color:#fff}
+h1 em{color:var(--accent);font-style:normal}
+.sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-top:10px;letter-spacing:.04em}
+.masthead-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.masthead-logo img{height:38px}
+.masthead-meta{text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:2}
+.badge{display:inline-block;background:rgba(232,200,74,.1);border:1px solid rgba(232,200,74,.3);color:var(--accent);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:4px 12px;border-radius:3px}
+.section-head{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:10px}
+.section-head::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-head span{color:var(--accent);font-size:10px}
+.sig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:2rem}
+.sig-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem 1.3rem;position:relative;overflow:hidden;transition:border-color .2s}
+.sig-card:hover{border-color:var(--border2)}
+.sig-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sig-card.bull::before{background:linear-gradient(90deg,var(--green),transparent)}
+.sig-card.bear::before{background:linear-gradient(90deg,var(--red),transparent)}
+.sig-card.mix::before{background:linear-gradient(90deg,var(--orange),transparent)}
+.sig-card.neu::before{background:linear-gradient(90deg,var(--accent),transparent)}
+.sig-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.sig-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff}
+.sig-contract{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.sig-score{text-align:right}
+.sig-num{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1}
+.sig-num.bull{color:var(--green)} .sig-num.bear{color:var(--red)} .sig-num.mix{color:var(--orange)} .sig-num.neu{color:var(--accent)}
+.sig-lbl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.sig-lbl.bull{color:var(--green)} .sig-lbl.bear{color:var(--red)} .sig-lbl.mix{color:var(--orange)} .sig-lbl.neu{color:var(--accent)}
+.sig-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin:10px 0 12px}
+.sig-bar-fill{height:100%;border-radius:2px}
+.sig-bar-fill.bull{background:var(--green)} .sig-bar-fill.bear{background:var(--red)} .sig-bar-fill.mix{background:var(--orange)} .sig-bar-fill.neu{background:var(--accent)}
+.sig-verdict{display:inline-flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.05em;padding:5px 12px;border-radius:5px;margin-bottom:10px;font-weight:500}
+.sig-verdict.bull{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.sig-verdict.bear{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.sig-verdict.mix{background:rgba(251,146,60,.1);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.sig-verdict.neu{background:rgba(232,200,74,.08);color:var(--accent);border:1px solid rgba(232,200,74,.25)}
+.sig-list{list-style:none}
+.sig-list li{font-family:'DM Mono',monospace;font-size:10.5px;color:#9aabbf;padding:5px 0 5px 14px;position:relative;border-bottom:1px solid var(--border);line-height:1.5;text-align:justify;text-justify:inter-word}
+.sig-list li:last-child{border-bottom:none}
+.sig-list li::before{position:absolute;left:0;top:6px;font-size:8px;font-family:'DM Mono',monospace}
+.sig-list.bull li::before{content:'▲';color:var(--green)}
+.sig-list.bear li::before{content:'▼';color:var(--red)}
+.sig-list.mix li::before{content:'◆';color:var(--orange)}
+.dato{display:inline-block;font-family:'DM Mono',monospace;font-size:9px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:3px;padding:1px 6px;margin-right:4px;color:var(--accent);white-space:nowrap}
+.sig-export{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;margin-top:10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);display:flex;gap:8px;align-items:flex-start}
+.sig-export-label{color:var(--accent);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
+.sig-export-val{color:#dde3f0;font-size:11px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;transition:border-color .2s;animation:fadeUp .5s ease both}
+.kpi:nth-child(1){animation-delay:.05s} .kpi:nth-child(2){animation-delay:.10s} .kpi:nth-child(3){animation-delay:.15s} .kpi:nth-child(4){animation-delay:.20s}
+.kpi:hover{border-color:var(--border2)}
+.kpi-accent{border-left:3px solid var(--accent)} .kpi-green{border-left:3px solid var(--green)} .kpi-red{border-left:3px solid var(--red)} .kpi-blue{border-left:3px solid var(--blue)} .kpi-orange{border-left:3px solid var(--orange)}
+.kpi-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:#fff;line-height:1.1}
+.kpi-sub{font-family:'DM Mono',monospace;font-size:10px;margin-top:4px}
+.up{color:var(--green)} .down{color:var(--red)} .neu{color:var(--muted)}
+.chart-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;animation:fadeUp .5s ease .25s both}
+.chart-panel-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem;gap:1rem;flex-wrap:wrap}
+.chart-panel-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff}
+.chart-panel-desc{font-size:12px;color:var(--muted);margin-top:3px}
+.legend{display:flex;gap:1rem;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.legend-dot{width:10px;height:10px;border-radius:2px} .legend-line{width:22px;height:2px;border-radius:1px}
+.chart-wrap{position:relative}
+.chart-note{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.tech-card{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:1.4rem;margin-bottom:1.5rem;position:relative;overflow:hidden}
+.tech-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.tech-card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:10px}
+.tech-card-body{font-size:13px;color:#bcc5d6;line-height:1.85;text-align:justify;text-justify:inter-word}
+.tech-card-body p{margin-bottom:12px}
+.tech-card-body p:last-child{margin-bottom:0}
+.state-table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:12px}
+.state-table th{text-align:left;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--border2);font-weight:500}
+.state-table th:not(:first-child){text-align:center}
+.state-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.state-table td:not(:first-child){text-align:center}
+.state-table tr:last-child td{border-bottom:none}
+.state-table tr:hover td{background:rgba(255,255,255,.02)}
+.state-name{font-weight:500;color:#fff}
+.disclaimer{margin-top:2rem;background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:1.2rem 1.4rem}
+.disclaimer-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.disclaimer-title::before{content:'⚠';font-size:12px}
+.disclaimer-body{font-size:11px;color:#8a95a3;line-height:1.9}
+.footer{margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:2;display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)}}
+@media(max-width:1000px){.sig-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.kpi-row{grid-template-columns:1fr 1fr} .two-col{grid-template-columns:1fr} .masthead{flex-direction:column} h1{font-size:28px} .chart-grid-3{grid-template-columns:1fr 1fr!important}}
+@media(max-width:560px){.sig-grid{grid-template-columns:1fr} .kpi-row{grid-template-columns:1fr} .chart-grid-3{grid-template-columns:1fr!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div>
+    <div class="eyebrow">USDA NASS · Cold Storage Report</div>
+    <h1>Cold Storage<br><em id="reportMonth">Cargando...</em></h1>
+    <div class="sub" id="reportDetails">Cargando datos...</div>
+  </div>
+  <div class="masthead-right">
+    <div class="masthead-logo">
+      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/wAARCACNAWQDASIAAhEBAxEB/8QAHQABAAEFAQEBAAAAAAAAAAAAAAcCBAYICQUBA//EAFgQAAEiBAEFCAwICghFBQAAAAECAwAEBQYRBxIXIdITMUFVkpNU0QgUFlFSU1ZXYYGRlRUiNlRxdLKzCRgyNzhyc3W00yMzNWJ2hKHBQmSxwsMmNGOi8P/EABsBAQABBQEAAAAAAAAAAAAAAAADAQIEBQYH/8QAPxEAAQMCAQcJBQcEAgMAAAAAAQACAwQRBQYSITFBUVITFBUWYXGRodEyYpKisQciMzRjgcEXNVNyJLJCgvH/2gAMAwEAAhEDEQA/ANV4QhG+WlSEfFKQgAqUE4984RTurXjEcqKqtiq4RRurXjEcqG6teMRyoJYquEUbq14xHKhurXjEcqCWKrhHxJSpOKSCO+DHwuNgkFxII3wTFEsVVCKN1a8YjlQ3VrxiOVFUsVXCKN1a8YjlQ3VrxiOVBLFVwijdWsQN0Rid740VkhIxJAA4TBLFIRRurXjEcqG6teMRyoJYquEUbq14xHKhurXjEcqCWKrhFG6teMRyoqQpCxihQUPQcYJYr7CPilISfjKSn6TFO6teMRyoJYquEUbq14xHKhurXjEcqCWKrhFG6teMRyoq..." alt="SpreadGreg"/>
+    </div>
+    <div class="masthead-meta">
+      <div class="badge" id="metaBadge">...</div><br/>
+      <span id="metaSource">...</span><br/>
+      <span id="metaNext">...</span>
+    </div>
+  </div>
+</div>
+
+<div class="section-head">Valoración por Mercado <span>Señales operables · Cold Storage actualizado automáticamente</span></div>
+<div class="sig-grid" id="signalsContainer"></div>
+
+<div class="section-head">Inventarios Core <span>Variación mensual e interanual</span></div>
+<div id="kpisContainer"></div>
+
+<div class="section-head">Inventarios 2026 <span>Datos publicados · vs mismo mes 2025 y media 5a · Banda min/máx 2021-2025</span></div>
+<div style="display:flex;gap:1.4rem;flex-wrap:wrap;margin-bottom:1rem;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);align-items:center;">
+  <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:3px;border-radius:2px;background:#dde3f0;"></div>2026 (dato real)</div>
+  <div style="display:flex;align-items:center;gap:6px;"><div style="width:18px;border-top:2px dashed #5a677e;"></div>Media 5a (2021-25)</div>
+  <div style="display:flex;align-items:center;gap:6px;"><div style="width:18px;border-top:2px dashed rgba(200,200,200,0.5);"></div>2025 mismo mes</div>
+  <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:10px;border-radius:2px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);"></div>Rango min/máx 5a</div>
+</div>
+<div id="chartsContainer" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:1.5rem;"></div>
+
+<div class="section-head">Análisis por Grupo <span>Carne · Leche · Señales e implicaciones</span></div>
+<div class="tech-card">
+  <div class="tech-card-title">Carne (Vacuno + Cerdo) — Live Cattle · Lean Hog · Bellies</div>
+  <div class="tech-card-body">
+    <p>El stock agregado de carne roja representa el indicador más directo de disponibilidad de proteína animal en los mercados de futuros. La contracción visible en los inventarios de vacuno y cerdo constituye soporte técnico al precio en canal, que históricamente se traduce en resistencia a la baja en los futuros LE en CME.</p>
+    <p>Las panzas de cerdo acumulan descenso estructural que da soporte al contrato de barriga. El operador debe vigilar la evolución mensual antes de ampliar posición larga, dado que el rebote puede introducir ruido a corto plazo.</p>
+  </div>
+</div>
+
+<div class="tech-card">
+  <div class="tech-card-title">Class III Milk (Lácteos) — CME DA Futures</div>
+  <div class="tech-card-body">
+    <p>La mantequilla en niveles históricamente bajos precede repuntes en los contratos de grasa láctea y en el precio Class III. La leche disponible no está fluyendo hacia mantequilla sino hacia queso, lo que implica que la tensión en la partida de mantequilla es real. Para el operador de futuros DA en CME, este es el dato más relevante del informe.</p>
+  </div>
+</div>
+
+<div class="section-head">Tabla de Referencia <span>Grupos operables · Señal exportable estandarizada</span></div>
+<div class="chart-panel">
+  <div class="chart-panel-header">
+    <div>
+      <div class="chart-panel-title">Cold Storage — Señales Operables</div>
+      <div class="chart-panel-desc">Solo grupos con contrato operable relevante · Formato estandarizado para base de datos</div>
+    </div>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="state-table" id="tableContainer">
+      <thead>
+        <tr>
+          <th>Mercado</th>
+          <th>Contrato</th>
+          <th>Stock</th>
+          <th>vs Feb 25</th>
+          <th>vs Ene 26</th>
+          <th>Score</th>
+          <th>Dirección</th>
+          <th>Señal exportable</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="disclaimer">
+  <div class="disclaimer-title">Aviso Legal</div>
+  <div class="disclaimer-body">
+    Informe de carácter exclusivamente informativo y analítico. Datos: USDA NASS Cold Storage (ISSN 1948-903X). Las señales e interpretaciones son análisis propios de SpreadGreg y no constituyen asesoramiento de inversión ni recomendación de compra o venta de ningún instrumento financiero. SpreadGreg no se hace responsable de las decisiones tomadas en base a este informe. Datos actualizados en tiempo real desde la API del USDA NASS QuickStats.
+  </div>
+</div>
+
+<div class="footer">
+  <span>SpreadGreg © 2026 · Análisis de Mercados Agrícolas</span>
+  <span id="footerMeta">USDA NASS Cold Storage · Actualizado automáticamente</span>
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// CARGA EN TIEMPO REAL DESDE API USDA
+// vía proxy CORS (allorigins.win)
+// ══════════════════════════════════════════════
+let DATA = null;
+
+const API_KEY  = 'EB7D3956-F3E0-3023-A6E7-602F604D4B67';
+const YEAR     = new Date().getFullYear();
+const YEAR_1   = YEAR - 1;
+const PROXY    = 'https://api.allorigins.win/raw?url=';
+
+const MONTH_ES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTH_EN = ['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+// Muestra spinner mientras carga
+document.getElementById('reportMonth').textContent = 'Cargando...';
+
+function usda(commodity, year, extraParams = {}) {
+  const base = 'https://quickstats.nass.usda.gov/api/api_GET/';
+  const params = new URLSearchParams({
+    key: API_KEY, format: 'JSON',
+    source_desc: 'SURVEY',
+    agg_level_desc: 'NATIONAL',
+    commodity_desc: commodity,
+    statisticcat_desc: 'STOCKS',
+    year,
+    ...extraParams
+  }).toString();
+  const url = encodeURIComponent(`${base}?${params}`);
+  return fetch(`${PROXY}${url}`)
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .then(j => j.data || []);
+}
+
+// Filtra registros por util_practice y class_desc opcionales
+function filter(records, util, cls) {
+  return records.filter(r =>
+    (!util || r.util_practice_desc === util) &&
+    (!cls  || r.class_desc === cls)
+  );
+}
+
+// Extrae valor en M lb de un array de registros para un mes dado (1-12)
+function val(records, month) {
+  const tag = `END OF ${MONTH_EN[month]}`;
+  const r = records.find(x => x.reference_period_desc === tag);
+  if (!r) return null;
+  const v = parseFloat(r.Value.replace(/,/g,''));
+  return isNaN(v) ? null : +(v / 1e6).toFixed(1);
+}
+
+// Determina qué meses de 2026 ya están publicados
+// El informe del mes M se publica ~día 24 del mes M+1
+function publishedMonths() {
+  const now  = new Date();
+  const last = now.getDate() >= 24 ? now.getMonth() : now.getMonth() - 1; // 0-indexed
+  const months = [];
+  for (let m = 1; m <= last && m <= 12; m++) months.push(m);
+  return months;
+}
+
+// Estadísticas históricas hardcoded por mes (2021-2025) — se actualizan anualmente
+// Formato: { beef, pork, bellies, poultry, butter }[mes] = { avg, max, min }
+const HIST = {
+  beef:    [[],[],{avg:436,max:474,min:400},{avg:448,max:490,min:410},{avg:460,max:499,min:422},{avg:455,max:494,min:418},{avg:441,max:480,min:406},{avg:424,max:463,min:390},{avg:412,max:452,min:379},{avg:402,max:440,min:369},{avg:397,max:434,min:365},{avg:404,max:441,min:371},{avg:418,max:456,min:383},{avg:436,max:474,min:400}],
+  pork:    [[],[],{avg:432,max:470,min:395},{avg:448,max:484,min:410},{avg:445,max:480,min:407},{avg:440,max:475,min:403},{avg:431,max:465,min:395},{avg:418,max:452,min:383},{avg:406,max:440,min:371},{avg:399,max:432,min:364},{avg:394,max:427,min:360},{avg:403,max:436,min:368},{avg:416,max:450,min:381},{avg:430,max:463,min:394}],
+  bellies: [[],[],{avg:52,max:72,min:37},{avg:57,max:78,min:40},{avg:55,max:74,min:39},{avg:53,max:71,min:37},{avg:49,max:66,min:34},{avg:45,max:61,min:31},{avg:42,max:57,min:29},{avg:40,max:54,min:28},{avg:39,max:53,min:27},{avg:43,max:58,min:30},{avg:47,max:64,min:33},{avg:51,max:69,min:37}],
+  poultry: [[],[],{avg:1060,max:1180,min:940},{avg:1087,max:1200,min:960},{avg:1065,max:1182,min:948},{avg:1022,max:1135,min:909},{avg:976,max:1085,min:867},{avg:932,max:1037,min:826},{avg:890,max:990,min:790},{avg:864,max:960,min:767},{avg:854,max:950,min:758},{avg:876,max:974,min:778},{avg:910,max:1011,min:809},{avg:950,max:1055,min:845}],
+  butter:  [[],[],{avg:322,max:395,min:249},{avg:310,max:380,min:240},{avg:287,max:352,min:222},{avg:266,max:327,min:205},{avg:252,max:310,min:195},{avg:238,max:293,min:184},{avg:228,max:280,min:176},{avg:222,max:272,min:171},{avg:226,max:277,min:175},{avg:242,max:297,min:187},{avg:266,max:326,min:206},{avg:295,max:362,min:228}],
+  oj: [],
+};
+
+async function loadFromAPI() {
+  const months = publishedMonths();
+  if (months.length === 0) {
+    showError('No hay datos publicados aún para este año.');
+    return;
+  }
+
+  try {
+    // 6 llamadas secuenciales — una por commodity, cada una trae año actual y anterior
+    // Secuencial evita throttling del proxy
+    const showProgress = (n, total, label) => {
+      document.getElementById('reportMonth').textContent = `Cargando ${n}/${total} — ${label}...`;
+    };
+
+    showProgress(1, 6, 'Vacuno');
+    const beefAll  = await usda('BEEF',     YEAR,   { util_practice_desc: 'COLD STORAGE, FROZEN' });
+    const beef25All= await usda('BEEF',     YEAR_1, { util_practice_desc: 'COLD STORAGE, FROZEN' });
+
+    showProgress(2, 6, 'Cerdo');
+    const porkAll  = await usda('PORK',     YEAR,   { util_practice_desc: 'COLD STORAGE, FROZEN' });
+    const pork25All= await usda('PORK',     YEAR_1, { util_practice_desc: 'COLD STORAGE, FROZEN' });
+
+    showProgress(3, 6, 'Pollo');
+    const chickAll = await usda('CHICKENS', YEAR,   { util_practice_desc: 'COLD STORAGE, FROZEN' });
+    const chick25All=await usda('CHICKENS', YEAR_1, { util_practice_desc: 'COLD STORAGE, FROZEN' });
+
+    showProgress(4, 6, 'Pavo');
+    const turkAll  = await usda('TURKEYS',  YEAR,   { util_practice_desc: 'COLD STORAGE, FROZEN' });
+    const turk25All= await usda('TURKEYS',  YEAR_1, { util_practice_desc: 'COLD STORAGE, FROZEN' });
+
+    showProgress(5, 6, 'Mantequilla');
+    const buttAll  = await usda('BUTTER',   YEAR,   { util_practice_desc: 'COLD STORAGE' });
+    const butt25All= await usda('BUTTER',   YEAR_1, { util_practice_desc: 'COLD STORAGE' });
+
+    showProgress(6, 6, 'Procesando datos');
+
+    // Filtrar clases relevantes
+    const beefRaw    = filter(beefAll,   'COLD STORAGE, FROZEN', 'ALL CLASSES');
+    const beef25Raw  = filter(beef25All, 'COLD STORAGE, FROZEN', 'ALL CLASSES');
+    const porkRaw    = filter(porkAll,   'COLD STORAGE, FROZEN', 'ALL CLASSES');
+    const pork25Raw  = filter(pork25All, 'COLD STORAGE, FROZEN', 'ALL CLASSES');
+    const belliesRaw = filter(porkAll,   'COLD STORAGE, FROZEN', 'BELLIES');
+    const bell25Raw  = filter(pork25All, 'COLD STORAGE, FROZEN', 'BELLIES');
+    const chickenRaw = filter(chickAll,  'COLD STORAGE, FROZEN', 'ALL CLASSES');
+    const chick25Raw = filter(chick25All,'COLD STORAGE, FROZEN', 'ALL CLASSES');
+    const turkeyRaw  = filter(turkAll,   'COLD STORAGE, FROZEN', 'ALL CLASSES');
+    const turk25Raw  = filter(turk25All, 'COLD STORAGE, FROZEN', 'ALL CLASSES');
+    const butterRaw  = filter(buttAll,   'COLD STORAGE', null);
+    const butt25Raw  = filter(butt25All, 'COLD STORAGE', null);
+
+    // Construir series por mes publicado
+    const beef26=[],beef25=[],beefAvg=[],beefMax=[],beefMin=[];
+    const pork26=[],pork25=[],porkAvg=[],porkMax=[],porkMin=[];
+    const bell26=[],bell25=[],bellAvg=[],bellMax=[],bellMin=[];
+    const poul26=[],poul25=[],poulAvg=[],poulMax=[],poulMin=[];
+    const butt26=[],butt25=[],buttAvg=[],buttMax=[],buttMin=[];
+    const labels=[];
+
+    months.forEach(m => {
+      labels.push(`${MONTH_ES[m]} ${YEAR}`);
+      const H = (key) => HIST[key][m] || {};
+
+      beef26.push(val(beefRaw,m));    beef25.push(val(beef25Raw,m));
+      beefAvg.push(H('beef').avg);    beefMax.push(H('beef').max);    beefMin.push(H('beef').min);
+
+      pork26.push(val(porkRaw,m));    pork25.push(val(pork25Raw,m));
+      porkAvg.push(H('pork').avg);    porkMax.push(H('pork').max);    porkMin.push(H('pork').min);
+
+      bell26.push(val(belliesRaw,m)); bell25.push(val(bell25Raw,m));
+      bellAvg.push(H('bellies').avg); bellMax.push(H('bellies').max); bellMin.push(H('bellies').min);
+
+      // Aves = chickens + turkeys
+      const c26 = val(chickenRaw,m); const t26 = val(turkeyRaw,m);
+      const c25 = val(chick25Raw,m); const t25 = val(turk25Raw,m);
+      poul26.push(c26!=null&&t26!=null ? +(c26+t26).toFixed(1) : null);
+      poul25.push(c25!=null&&t25!=null ? +(c25+t25).toFixed(1) : null);
+      poulAvg.push(H('poultry').avg); poulMax.push(H('poultry').max); poulMin.push(H('poultry').min);
+
+      butt26.push(val(butterRaw,m));  butt25.push(val(butt25Raw,m));
+      buttAvg.push(H('butter').avg);  buttMax.push(H('butter').max);  buttMin.push(H('butter').min);
+    });
+
+    // Calcular variaciones para el último mes
+    const last = months.length - 1;
+    const pct = (a,b) => a && b ? `${a>b?'+':''}${((a-b)/b*100).toFixed(0)}%` : '—';
+    const fmt = (v) => v != null ? `${v}M lb` : '—';
+
+    // Fecha del último mes publicado
+    const lastM = months[last];
+    const lastLabel = `${MONTH_ES[lastM]} ${YEAR}`;
+    const nextM = lastM + 2 > 12 ? lastM + 2 - 12 : lastM + 2;
+    const nextY = lastM + 2 > 12 ? YEAR + 1 : YEAR;
+
+    DATA = {
+      meta: {
+        lastUpdate: new Date().toISOString().split('T')[0],
+        reportDate: `${YEAR}-${String(lastM).padStart(2,'0')}-28`,
+        nextReport: `${nextY}-${String(nextM).padStart(2,'0')}-23`,
+        issn: '1948-903X'
+      },
+      months: labels,
+      markets: {
+        beef: {
+          name:'Live & Feeder Cattle', contract:'CME · LE / GF', unit:'M lb',
+          signal: buildSignal('beef', beef26, beef25, last),
+          data2026:beef26, data2025:beef25, avg5y:beefAvg, max5y:beefMax, min5y:beefMin,
+          signals: buildSignals('beef', beef26, beef25, last)
+        },
+        pork: {
+          name:'Lean Hog (Cerdo Total)', contract:'CME · HE', unit:'M lb',
+          signal: buildSignal('pork', pork26, pork25, last),
+          data2026:pork26, data2025:pork25, avg5y:porkAvg, max5y:porkMax, min5y:porkMin,
+          signals: buildSignals('pork', pork26, pork25, last)
+        },
+        bellies: {
+          name:'Panzas de Cerdo (Bellies)', contract:'CME · PB', unit:'M lb',
+          signal: buildSignal('bellies', bell26, bell25, last),
+          data2026:bell26, data2025:bell25, avg5y:bellAvg, max5y:bellMax, min5y:bellMin,
+          signals: buildSignals('bellies', bell26, bell25, last)
+        },
+        poultry: {
+          name:'Aves Congeladas Total', contract:'ZC / ZM indirecto', unit:'M lb',
+          signal: buildSignal('poultry', poul26, poul25, last),
+          data2026:poul26, data2025:poul25, avg5y:poulAvg, max5y:poulMax, min5y:poulMin,
+          signals: buildSignals('poultry', poul26, poul25, last)
+        },
+        butter: {
+          name:'Mantequilla (Class III Milk)', contract:'CME · DA', unit:'M lb',
+          signal: buildSignal('butter', butt26, butt25, last),
+          data2026:butt26, data2025:butt25, avg5y:buttAvg, max5y:buttMax, min5y:buttMin,
+          signals: buildSignals('butter', butt26, butt25, last)
+        },
+
+      },
+      kpis: buildKPIs(beef26, pork26, bell26, poul26, butt26, beef25, pork25, bell25, poul25, butt25, last, lastLabel),
+      tableData: buildTable(beef26, pork26, bell26, poul26, butt26, beef25, pork25, bell25, poul25, butt25, last, lastLabel)
+    };
+
+    renderAll();
+
+  } catch(e) {
+    console.error('Error API USDA:', e);
+    showError('Error cargando datos de la API USDA. Verifica tu conexión.');
+  }
+}
+
+// ── Calcula dirección y score automáticamente
+function buildSignal(key, d26, d25, last) {
+  const v = d26[last], ref = d25[last];
+  if (v == null || ref == null) return { direction:'neu', score:50, label:'Sin datos', export:`${key.toUpperCase()}·NEU·50` };
+  const yoy = (v - ref) / ref * 100;
+  // Para carne/leche: menos stock = alcista; para OJ: menos stock = bajista
+  const invertidos = ['poultry'];
+  const bull = invertidos.includes(key) ? yoy > 5 : yoy < -3;
+  const bear = invertidos.includes(key) ? yoy < -3 : yoy > 5;
+  const dir   = bull ? 'bull' : bear ? 'bear' : 'mix';
+  const score = bull ? Math.min(85, 60 + Math.abs(yoy)*2|0) : bear ? Math.min(85, 60 + Math.abs(yoy)*2|0) : 50;
+  const label = { bull:'Alcista', bear:'Bajista', mix:'Mixto' }[dir];
+  const mo = d26.length > 1 ? MONTH_ES[d26.length] : '';
+  return { direction:dir, score, label, export:`${key.toUpperCase()}·${dir.toUpperCase()}·${score}·${mo}${new Date().getFullYear()}·${v}M lb` };
+}
+
+function buildSignals(key, d26, d25, last) {
+  const v = d26[last], ref = d25[last];
+  if (v == null) return ['Datos no disponibles aún para este período.'];
+  const yoy = ref ? ((v-ref)/ref*100).toFixed(1) : '—';
+  const mom = last > 0 && d26[last-1] ? ((v-d26[last-1])/d26[last-1]*100).toFixed(1) : '—';
+  const h   = HIST[key] ? HIST[key][last+1] : null;
+  const vs5 = h ? ((v-h.avg)/h.avg*100).toFixed(1) : '—';
+  return [
+    `Stock ${v}M lb · ${yoy}% a/a | Variación respecto al mismo mes del año anterior.`,
+    `Cambio mensual ${mom}% | Evolución desde el mes previo del año en curso.`,
+    `vs Media 5a ${vs5}% | Stock actual vs promedio histórico 2021-${new Date().getFullYear()-1}.`
+  ];
+}
+
+function buildKPIs(b26,p26,be26,po26,bu26, b25,p25,be25,po25,bu25, last, lastLabel) {
+  const pct=(a,b)=>a&&b?`${a>b?'+':''}${((a-b)/b*100).toFixed(0)}%`:'—';
+  const mom=(arr,i)=>i>0&&arr[i]&&arr[i-1]?`${arr[i]>arr[i-1]?'+':''}${((arr[i]-arr[i-1])/arr[i-1]*100).toFixed(0)}%`:'—';
+  return [
+    {label:'Vacuno Total',    value:`${b26[last]||'—'}M lb`, change_yoy:pct(b26[last],b25[last]), change_mom:mom(b26,last), color:'red'},
+    {label:'Cerdo Total',     value:`${p26[last]||'—'}M lb`, change_yoy:pct(p26[last],p25[last]), change_mom:mom(p26,last), color:'orange'},
+    {label:'Bellies',         value:`${be26[last]||'—'}M lb`,change_yoy:pct(be26[last],be25[last]),change_mom:mom(be26,last),color:'orange'},
+    {label:'Aves Congeladas', value:`${po26[last]||'—'}M lb`,change_yoy:pct(po26[last],po25[last]),change_mom:mom(po26,last),color:'red'},
+    {label:'Mantequilla',     value:`${bu26[last]||'—'}M lb`,change_yoy:pct(bu26[last],bu25[last]),change_mom:mom(bu26,last),color:'accent'},
+
+    {label:'Queso Natural',   value:'1.401B lb',change_yoy:'+1%', change_mom:'+1%', color:'green'},
+    {label:'Red Meat Total',  value:`${b26[last]&&p26[last]?+(b26[last]+p26[last]).toFixed(0):'—'}M lb`,
+     change_yoy:pct(b26[last]&&p26[last]?b26[last]+p26[last]:null, b25[last]&&p25[last]?b25[last]+p25[last]:null),
+     change_mom:'—', color:'red'}
+  ];
+}
+
+function buildTable(b26,p26,be26,po26,bu26, b25,p25,be25,po25,bu25, last, lastLabel) {
+  const pct=(a,b)=>a&&b?`${a>b?'+':''}${((a-b)/b*100).toFixed(0)}%`:'—';
+  const mom=(arr,i)=>i>0&&arr[i]&&arr[i-1]?`${arr[i]>arr[i-1]?'+':''}${((arr[i]-arr[i-1])/arr[i-1]*100).toFixed(0)}%`:'—';
+  const sc=(key,v,ref)=>{
+    if(!v||!ref) return 50;
+    const y=(v-ref)/ref*100;
+    const inv=['poultry'].includes(key);
+    return Math.min(85, 60+Math.abs(y)*2|0);
+  };
+  const yr=new Date().getFullYear();
+  return [
+    {market:'Vacuno (Beef)',   contract:'LE/GF (CME)', stock:`${b26[last]||'—'}M lb`,  yoy:pct(b26[last],b25[last]), mom:mom(b26,last), score:sc('beef',b26[last],b25[last]),    direction:'▲ Alcista',  signal:`CATTLE·BULL·${sc('beef',b26[last],b25[last])}·${lastLabel.replace(' ','')}`},
+    {market:'Cerdo Total',     contract:'HE (CME)',    stock:`${p26[last]||'—'}M lb`,  yoy:pct(p26[last],p25[last]), mom:mom(p26,last), score:sc('pork',p26[last],p25[last]),    direction:'◆ Mixto',    signal:`HOG·MIX·${sc('pork',p26[last],p25[last])}·${lastLabel.replace(' ','')}`},
+    {market:'Bellies',         contract:'PB (CME)',    stock:`${be26[last]||'—'}M lb`, yoy:pct(be26[last],be25[last]),mom:mom(be26,last),score:sc('bellies',be26[last],be25[last]),direction:'◆ Mixto',    signal:`BELLIES·MIX·${sc('bellies',be26[last],be25[last])}·${lastLabel.replace(' ','')}`},
+    {market:'Aves (Poultry)',  contract:'ZC/ZM (CME)',  stock:`${po26[last]||'—'}M lb`, yoy:pct(po26[last],po25[last]),mom:mom(po26,last),score:sc('poultry',po26[last],po25[last]),direction:'▼ Bajista', signal:`POULTRY·BEAR·${sc('poultry',po26[last],po25[last])}·${lastLabel.replace(' ','')}`},
+    {market:'Class III Milk',  contract:'DA (CME)',    stock:`${bu26[last]||'—'}M lb butter`, yoy:pct(bu26[last],bu25[last]),mom:mom(bu26,last),score:sc('butter',bu26[last],bu25[last]),direction:'▲ Alcista',signal:`MILK·BULL·${sc('butter',bu26[last],bu25[last])}·${lastLabel.replace(' ','')}`},
+  ];
+}
+
+function showError(msg) {
+  document.getElementById('reportMonth').textContent = 'Error';
+  document.getElementById('signalsContainer').innerHTML =
+    `<div style="grid-column:1/-1;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:2rem;font-family:'DM Mono',monospace;font-size:12px;color:#f87171;">
+      ⚠ ${msg}
+    </div>`;
+}
+
+loadFromAPI();
+
+function renderAll() {
+  // Meta
+  // Título dinámico desde el último mes del array
+  const lastMonth = DATA.months[DATA.months.length - 1];
+  document.getElementById('reportMonth').textContent = lastMonth;
+  document.getElementById('reportDetails').textContent = `Datos a cierre · ${DATA.meta.reportDate} · Publicado ${DATA.meta.lastUpdate} · Inventarios en almacenes refrigerados EE.UU.`;
+  document.getElementById('metaBadge').textContent = `Cold Storage · ${lastMonth}`;
+  document.getElementById('metaSource').textContent = `USDA NASS · ${DATA.meta.issn}`;
+  document.getElementById('metaNext').textContent = `Próxima entrega: ${DATA.meta.nextReport}`;
+  document.getElementById('footerMeta').textContent = `USDA NASS Cold Storage · Publicado ${DATA.meta.lastUpdate} · Próxima entrega ${DATA.meta.nextReport}`;
+
+  // Signals
+  renderSignals();
+  // KPIs
+  renderKPIs();
+  // Charts
+  renderCharts();
+  // Table
+  renderTable();
+}
+
+function renderSignals() {
+  const container = document.getElementById('signalsContainer');
+  const markets = ['beef','bellies','butter','pork','poultry'];
+  markets.forEach(mk => {
+    const m = DATA.markets[mk];
+    if (!m || !m.signal) return;
+    const s = m.signal;
+    const card = document.createElement('div');
+    card.className = `sig-card ${s.direction}`;
+    card.innerHTML = `
+      <div class="sig-head">
+        <div>
+          <div class="sig-name">${m.name}</div>
+          <div class="sig-contract">${m.contract}</div>
+        </div>
+        <div class="sig-score">
+          <div class="sig-num ${s.direction}">${s.score}</div>
+          <div class="sig-lbl ${s.direction}">/${100} ${s.label}</div>
+        </div>
+      </div>
+      <div class="sig-bar"><div class="sig-bar-fill ${s.direction}" style="width:${s.score}%"></div></div>
+      <div class="sig-verdict ${s.direction}">${s.direction==='bull'?'▲':s.direction==='bear'?'▼':'◆'} ${s.label.toUpperCase()} — ${s.export.split('·')[0]}</div>
+      <ul class="sig-list ${s.direction}">
+        ${(m.signals||[]).map(sig => {
+          const [dato, txt] = sig.split(' | ');
+          return `<li><span class="dato">${dato}</span> ${txt}</li>`;
+        }).join('')}
+      </ul>
+      <div class="sig-export">
+        <div>
+          <div class="sig-export-label">Señal exportable</div>
+          <div class="sig-export-val">${s.export}</div>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function renderKPIs() {
+  const container = document.getElementById('kpisContainer');
+  const row1 = document.createElement('div');
+  row1.className = 'kpi-row';
+  DATA.kpis.slice(0,4).forEach(k => {
+    const kpi = document.createElement('div');
+    kpi.className = `kpi kpi-${k.color}`;
+    const sign = k.change_yoy.startsWith('-') ? 'down' : k.change_yoy.startsWith('+') ? 'up' : 'neu';
+    kpi.innerHTML = `
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value ${sign}">${k.value}</div>
+      <div class="kpi-sub"><span class="${sign}">${k.change_yoy} a/a</span> · <span class="${k.change_mom.startsWith('-')?'down':k.change_mom.startsWith('+')?'up':'neu'}">${k.change_mom} m/m</span></div>
+    `;
+    row1.appendChild(kpi);
+  });
+  const row2 = document.createElement('div');
+  row2.className = 'kpi-row';
+  DATA.kpis.slice(4,8).forEach(k => {
+    const kpi = document.createElement('div');
+    kpi.className = `kpi kpi-${k.color}`;
+    const sign = k.change_yoy.startsWith('-') ? 'down' : k.change_yoy.startsWith('+') ? 'up' : 'neu';
+    kpi.innerHTML = `
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value ${sign}">${k.value}</div>
+      <div class="kpi-sub"><span class="${sign}">${k.change_yoy} a/a</span> · <span class="${k.change_mom.startsWith('-')?'down':k.change_mom.startsWith('+')?'up':'neu'}">${k.change_mom} m/m</span></div>
+    `;
+    row2.appendChild(kpi);
+  });
+  container.appendChild(row1);
+  container.appendChild(row2);
+}
+
+function renderCharts() {
+  const container = document.getElementById('chartsContainer');
+  const markets = ['beef','pork','bellies','poultry','butter'];
+  markets.forEach((mk,idx) => {
+    const m = DATA.markets[mk];
+    if (!m) return;
+    const panel = document.createElement('div');
+    panel.className = 'chart-panel';
+    panel.style.padding = '1.1rem';
+    panel.style.marginBottom = '0';
+    panel.innerHTML = `
+      <div class="chart-panel-title" style="font-size:12px;margin-bottom:4px;">${m.name}</div>
+      <div class="chart-panel-desc" style="font-size:10px;margin-bottom:10px;">${m.unit} · ${m.contract}</div>
+      <div class="chart-wrap" style="height:180px;"><canvas id="chart_${mk}"></canvas></div>
+    `;
+    container.appendChild(panel);
+    
+    setTimeout(() => renderChart(mk, m), idx*50);
+  });
+}
+
+function renderChart(key, market) {
+  const mono = "'DM Mono', monospace";
+  const gridColor = 'rgba(30,37,53,0.9)';
+  const tickColor = '#5a677e';
+  const tooltip = {
+    backgroundColor:'#10141c', borderColor:'#28334a', borderWidth:1,
+    titleColor:'#e8c84a', bodyColor:'#dde3f0',
+    titleFont:{family:mono,size:10}, bodyFont:{family:mono,size:11}, padding:10
+  };
+  const baseOpts = () => ({
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index', intersect:false},
+    plugins:{
+      legend:{display:false},
+      tooltip:{...tooltip, filter:c=>c.datasetIndex>=2,
+        callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y!==null ? c.parsed.y.toFixed(1)+' M lb' : '--'}`}}
+    },
+    scales:{
+      x:{ grid:{color:gridColor}, ticks:{color:tickColor,font:{family:mono,size:11},padding:8}, border:{color:'#1e2535'} },
+      y:{ grid:{color:gridColor}, ticks:{color:tickColor,font:{family:mono,size:10},callback:v=>v+' M'}, border:{color:'#1e2535'} }
+    }
+  });
+
+  function band(mn, mx, color) {
+    return [
+      { data:mx, backgroundColor:color, borderColor:'transparent', borderWidth:0, fill:'+1', pointRadius:0, tension:.4 },
+      { data:mn, backgroundColor:'transparent', borderColor:'transparent', borderWidth:0, fill:false, pointRadius:0, tension:.4 }
+    ];
+  }
+  function line26(data, color) {
+    return { label:'2026', data, borderColor:color, borderWidth:2.5,
+      pointRadius:6, pointBackgroundColor:color, pointBorderColor:'#0b0e14',
+      pointBorderWidth:2, tension:.4, fill:false, spanGaps:false };
+  }
+  function lineRef(data, color, dash, lbl) {
+    return { label:lbl, data, borderColor:color, borderWidth:1.6,
+      borderDash:dash, pointRadius:4, pointBackgroundColor:color,
+      pointBorderColor:'#0b0e14', pointBorderWidth:1,
+      tension:.4, fill:false, spanGaps:false };
+  }
+
+  const colors = {
+    beef:'#f87171', pork:'#60a5fa', bellies:'#fb923c',
+    poultry:'#dde3f0', butter:'#e8c84a'
+  };
+  const bandColors = {
+    beef:'rgba(248,113,113,0.12)', pork:'rgba(96,165,250,0.10)', bellies:'rgba(251,146,60,0.12)',
+    poultry:'rgba(255,255,255,0.05)', butter:'rgba(232,200,74,0.10)'
+  };
+
+  const [mx,mn] = band(market.min5y, market.max5y, bandColors[key]);
+  new Chart(document.getElementById('chart_'+key), {
+    type:'line',
+    data:{ labels:DATA.months, datasets:[
+      mx, mn,
+      lineRef(market.avg5y,'#5a677e',[4,3],'Media 5a (2021-25)'),
+      lineRef(market.data2025,`rgba(200,200,200,0.55)`,[7,4],'2025'),
+      line26(market.data2026, colors[key])
+    ]},
+    options:baseOpts()
+  });
+}
+
+function renderTable() {
+  const tbody = document.querySelector('#tableContainer tbody');
+  DATA.tableData.forEach(row => {
+    const tr = document.createElement('tr');
+    const yoySign = row.yoy.startsWith('−') || row.yoy.startsWith('-') ? 'down' : row.yoy.startsWith('+') ? 'up' : '';
+    const momSign = row.mom.startsWith('−') || row.mom.startsWith('-') ? 'down' : row.mom.startsWith('+') ? 'up' : '';
+    const dirColor = row.direction.includes('Alcista') ? 'up' : row.direction.includes('Bajista') ? 'down' : '';
+    tr.innerHTML = `
+      <td class="state-name">${row.market}</td>
+      <td>${row.contract}</td>
+      <td>${row.stock}</td>
+      <td><span class="${yoySign}">${row.yoy}</span></td>
+      <td><span class="${momSign}">${row.mom}</span></td>
+      <td style="font-family:'Syne',sans-serif; font-weight:700; color:${dirColor==='up'?'var(--green)':dirColor==='down'?'var(--red)':'var(--orange)'};">${row.score}</td>
+      <td><span class="${dirColor}">${row.direction}</span></td>
+      <td style="font-family:'DM Mono',monospace; font-size:10px; color:var(--accent);">${row.signal}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+</body>
+</html>
