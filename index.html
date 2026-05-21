@@ -257,13 +257,17 @@ function filter(records, util, cls) {
 }
 
 // ── Determina meses publicados de 2026 ──
-// Informe del mes M se publica ~día 24 del mes M+1
+// El informe publicado el día 24 del mes M contiene datos del mes M-1
+// Ejemplo: 24 abril publica datos de marzo → último dato disponible = marzo
 function publishedMonths() {
-  const now  = new Date();
-  // Si aún no ha pasado el día 24, el mes anterior aún no tiene informe
-  const last = now.getDate() >= 24 ? now.getMonth() : now.getMonth() - 1; // 0-indexed
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  const currentDay   = now.getDate();
+  // Si hoy es antes del 24: el último dato es de hace 2 meses (currentMonth - 2)
+  // Si hoy es día 24 o después: el último dato es del mes anterior (currentMonth - 1)
+  const lastDataMonth = currentDay >= 24 ? currentMonth - 1 : currentMonth - 2;
   const months = [];
-  for (let m = 1; m <= last && m <= 12; m++) months.push(m);
+  for (let m = 1; m <= lastDataMonth && m <= 12; m++) months.push(m);
   return months;
 }
 
@@ -514,19 +518,19 @@ loadFromAPI();
 // ══ Renders ════════════════════════════════════════════════
 
 function renderAll() {
-  // ── Fecha del último mes publicado ──────────────────────
-  // Formato legible: "Abr 2026"
-  const lastMonth = DATA.months[DATA.months.length - 1];
+  // ── Fechas del informe ─────────────────────────────────
+  // El informe publicado el día 24 del mes M contiene datos del mes M-1
+  // Ejemplo: publicado 24 abril → datos de marzo → próximo: 23 mayo
+  const lastMonth = DATA.months[DATA.months.length - 1];  // "Mar 2026"
+  const lastMIdx  = DATA.meta.lastMonthIndex;              // 1-12 (mes del dato, ej: 3 = marzo)
 
-  // Fecha de publicación real del informe USDA:
-  // el informe del mes M se publica el ~día 24 del mes M+1
-  const lastMIdx  = DATA.meta.lastMonthIndex;              // 1-12
-  const pubMonth  = lastMIdx === 12 ? 1 : lastMIdx + 1;
+  // Fecha de publicación: día 24 del mes siguiente al dato
+  const pubMonth  = lastMIdx === 12 ? 1  : lastMIdx + 1;
   const pubYear   = lastMIdx === 12 ? YEAR + 1 : YEAR;
   const pubDate   = pubYear + '-' + String(pubMonth).padStart(2,'0') + '-24';
 
-  // Próximo informe: mes M+2, día ~23
-  const nxtMonth  = lastMIdx >= 11 ? lastMIdx - 10 : lastMIdx + 2;
+  // Próxima entrega: día 23 del mes siguiente a la publicación (= mes dato + 2)
+  const nxtMonth  = lastMIdx >= 11 ? lastMIdx - 9  : lastMIdx + 2;
   const nxtYear   = lastMIdx >= 11 ? YEAR + 1 : YEAR;
   const nextDate  = nxtYear + '-' + String(nxtMonth).padStart(2,'0') + '-23';
 
