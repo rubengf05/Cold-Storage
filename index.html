@@ -378,9 +378,8 @@ async function loadFromAPI() {
 
     DATA = {
       meta: {
-        lastUpdate: new Date().toISOString().split('T')[0],
-        reportDate: YEAR + '-' + String(lastM).padStart(2,'0') + '-28',
-        nextReport: nextY + '-' + String(nextM).padStart(2,'0') + '-23',
+        lastUpdate:     new Date().toISOString().split('T')[0],
+        lastMonthIndex: lastM,
         issn: '1948-903X'
       },
       months: labels,
@@ -515,13 +514,31 @@ loadFromAPI();
 // ══ Renders ════════════════════════════════════════════════
 
 function renderAll() {
+  // ── Fecha del último mes publicado ──────────────────────
+  // Formato legible: "Abr 2026"
   const lastMonth = DATA.months[DATA.months.length - 1];
-  document.getElementById('reportMonth').textContent   = lastMonth;
-  document.getElementById('reportDetails').textContent = 'Datos a cierre · ' + DATA.meta.reportDate + ' · Publicado ' + DATA.meta.lastUpdate + ' · Inventarios en almacenes refrigerados EE.UU.';
-  document.getElementById('metaBadge').textContent     = 'Cold Storage · ' + lastMonth;
-  document.getElementById('metaSource').textContent    = 'USDA NASS · ' + DATA.meta.issn;
-  document.getElementById('metaNext').textContent      = 'Próxima entrega: ' + DATA.meta.nextReport;
-  document.getElementById('footerMeta').textContent    = 'USDA NASS Cold Storage · Publicado ' + DATA.meta.lastUpdate + ' · Próxima entrega ' + DATA.meta.nextReport;
+
+  // Fecha de publicación real del informe USDA:
+  // el informe del mes M se publica el ~día 24 del mes M+1
+  const lastMIdx  = DATA.meta.lastMonthIndex;              // 1-12
+  const pubMonth  = lastMIdx === 12 ? 1 : lastMIdx + 1;
+  const pubYear   = lastMIdx === 12 ? YEAR + 1 : YEAR;
+  const pubDate   = pubYear + '-' + String(pubMonth).padStart(2,'0') + '-24';
+
+  // Próximo informe: mes M+2, día ~23
+  const nxtMonth  = lastMIdx >= 11 ? lastMIdx - 10 : lastMIdx + 2;
+  const nxtYear   = lastMIdx >= 11 ? YEAR + 1 : YEAR;
+  const nextDate  = nxtYear + '-' + String(nxtMonth).padStart(2,'0') + '-23';
+
+  // ── Helper defensivo ────────────────────────────────────
+  const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+  setText('reportMonth',  lastMonth);
+  setText('reportDetails','Datos a cierre ' + lastMonth + ' · Publicado ' + pubDate + ' · USDA NASS Cold Storage · Inventarios EE.UU.');
+  setText('metaBadge',    'Cold Storage · ' + lastMonth);
+  setText('metaSource',   'USDA NASS · ISSN ' + DATA.meta.issn);
+  setText('metaNext',     'Próxima entrega: ' + nextDate);
+  setText('footerMeta',   'USDA NASS Cold Storage · Último dato: ' + lastMonth + ' · Próxima entrega ' + nextDate);
 
   renderSignals();
   renderKPIs();
