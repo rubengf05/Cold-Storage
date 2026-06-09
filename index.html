@@ -158,15 +158,6 @@ h1 em{color:var(--accent);font-style:normal}
 <div class="section-head">Inventarios Core <span>Variación mensual e interanual</span></div>
 <div id="kpisContainer"></div>
 
-<div class="section-head">Inventarios 2026 <span>Datos publicados · vs mismo mes 2025 y media 5a · Banda min/máx 2021-2025</span></div>
-<div style="display:flex;gap:1.4rem;flex-wrap:wrap;margin-bottom:1rem;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);align-items:center;">
-  <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:3px;border-radius:2px;background:#dde3f0;"></div>2026 (dato real)</div>
-  <div style="display:flex;align-items:center;gap:6px;"><div style="width:18px;border-top:2px dashed #5a677e;"></div>Media 5a (2021-25)</div>
-  <div style="display:flex;align-items:center;gap:6px;"><div style="width:18px;border-top:2px dashed rgba(200,200,200,0.5);"></div>2025 mismo mes</div>
-  <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:10px;border-radius:2px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);"></div>Rango min/máx 5a</div>
-</div>
-<div id="chartsContainer" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:1.5rem;"></div>
-
 <div class="section-head">Análisis por Grupo <span>Carne · Leche · Señales e implicaciones</span></div>
 <div class="tech-card">
   <div class="tech-card-title">Carne (Vacuno + Cerdo) — Live Cattle · Lean Hog · Bellies</div>
@@ -612,90 +603,6 @@ function renderKPIs() {
   };
   container.appendChild(makeRow(DATA.kpis.slice(0,4)));
   container.appendChild(makeRow(DATA.kpis.slice(4)));
-}
-
-function renderCharts() {
-  const container = document.getElementById('chartsContainer');
-  const markets = ['beef','pork','bellies','poultry','butter'];
-  markets.forEach((mk,idx) => {
-    const m = DATA.markets[mk];
-    if (!m) return;
-    const panel = document.createElement('div');
-    panel.className = 'chart-panel';
-    panel.style.padding = '1.1rem';
-    panel.style.marginBottom = '0';
-    panel.innerHTML =
-      '<div class="chart-panel-title" style="font-size:12px;margin-bottom:4px;">' + m.name + '</div>' +
-      '<div class="chart-panel-desc" style="font-size:10px;margin-bottom:10px;">' + m.unit + ' · ' + m.contract + '</div>' +
-      '<div class="chart-wrap" style="height:180px;"><canvas id="chart_' + mk + '"></canvas></div>';
-    container.appendChild(panel);
-    setTimeout(() => renderChart(mk, m), idx * 50);
-  });
-}
-
-function renderChart(key, market) {
-  const mono      = "'DM Mono', monospace";
-  const gridColor = 'rgba(30,37,53,0.9)';
-  const tickColor = '#5a677e';
-  const tooltip   = {
-    backgroundColor:'#10141c', borderColor:'#28334a', borderWidth:1,
-    titleColor:'#e8c84a', bodyColor:'#dde3f0',
-    titleFont:{family:mono,size:10}, bodyFont:{family:mono,size:11}, padding:10
-  };
-  const baseOpts = () => ({
-    responsive:true, maintainAspectRatio:false,
-    interaction:{mode:'index', intersect:false},
-    plugins:{
-      legend:{display:false},
-      tooltip:{...tooltip, filter:c=>c.datasetIndex>=2,
-        callbacks:{label:c=>' ' + c.dataset.label + ': ' + (c.parsed.y!==null ? c.parsed.y.toFixed(1)+' M lb' : '--')}}
-    },
-    scales:{
-      x:{ grid:{color:gridColor}, ticks:{color:tickColor,font:{family:mono,size:11},padding:8}, border:{color:'#1e2535'} },
-      y:{ grid:{color:gridColor}, ticks:{color:tickColor,font:{family:mono,size:10},callback:v=>v+' M'}, border:{color:'#1e2535'} }
-    }
-  });
-
-  function band(mx, mn, color) {
-    return [
-      { data:mx, backgroundColor:color, borderColor:'transparent', borderWidth:0, fill:'+1', pointRadius:0, tension:.4 },
-      { data:mn, backgroundColor:'transparent', borderColor:'transparent', borderWidth:0, fill:false, pointRadius:0, tension:.4 }
-    ];
-  }
-  const colors     = { beef:'#f87171', pork:'#60a5fa', bellies:'#fb923c', poultry:'#dde3f0', butter:'#e8c84a' };
-  const bandColors = { beef:'rgba(248,113,113,0.12)', pork:'rgba(96,165,250,0.10)', bellies:'rgba(251,146,60,0.12)', poultry:'rgba(255,255,255,0.05)', butter:'rgba(232,200,74,0.10)' };
-
-  const [bMax, bMin] = band(market.max5y, market.min5y, bandColors[key]);
-  new Chart(document.getElementById('chart_' + key), {
-    type:'line',
-    data:{ labels:DATA.months, datasets:[
-      bMax, bMin,
-      { label:'Media 5a (2021-25)', data:market.avg5y, borderColor:'#5a677e', borderDash:[4,3], borderWidth:1.6, pointRadius:4, pointBackgroundColor:'#5a677e', pointBorderColor:'#0b0e14', pointBorderWidth:1, tension:.4, fill:false, spanGaps:false },
-      { label:'2025',               data:market.data2025, borderColor:'rgba(200,200,200,0.55)', borderDash:[7,4], borderWidth:1.6, pointRadius:4, pointBackgroundColor:'rgba(200,200,200,0.55)', pointBorderColor:'#0b0e14', pointBorderWidth:1, tension:.4, fill:false, spanGaps:false },
-      { label:'2026',               data:market.data2026, borderColor:colors[key], borderWidth:2.5, pointRadius:6, pointBackgroundColor:colors[key], pointBorderColor:'#0b0e14', pointBorderWidth:2, tension:.4, fill:false, spanGaps:false }
-    ]},
-    options:baseOpts()
-  });
-}
-
-function renderTable() {
-  const tbody = document.querySelector('#tableContainer tbody');
-  DATA.tableData.forEach(row => {
-    const tr = document.createElement('tr');
-    const yoySign = row.yoy.startsWith('−')||row.yoy.startsWith('-') ? 'down' : row.yoy.startsWith('+') ? 'up' : '';
-    const momSign = row.mom.startsWith('−')||row.mom.startsWith('-') ? 'down' : row.mom.startsWith('+') ? 'up' : '';
-    const dirColor = row.direction.includes('Alcista') ? 'up' : row.direction.includes('Bajista') ? 'down' : '';
-    tr.innerHTML =
-      '<td class="state-name">' + row.market + '</td>' +
-      '<td>' + row.contract + '</td>' +
-      '<td>' + row.stock + '</td>' +
-      '<td><span class="' + yoySign + '">' + row.yoy + '</span></td>' +
-      '<td><span class="' + momSign + '">' + row.mom + '</span></td>' +
-      '<td style="font-family:\'Syne\',sans-serif;font-weight:700;color:' + (dirColor==='up'?'var(--green)':dirColor==='down'?'var(--red)':'var(--orange)') + ';">' + row.score + '</td>' +
-      '<td><span class="' + dirColor + '">' + row.direction + '</span></td>' +
-      '<td style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--accent);">' + row.signal + '</td>';
-    tbody.appendChild(tr);
-  });
 }
 </script>
 </body>
