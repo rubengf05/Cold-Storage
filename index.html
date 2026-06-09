@@ -601,6 +601,25 @@ function renderKPIs() {
   container.appendChild(makeRow(DATA.kpis.slice(0,4)));
   container.appendChild(makeRow(DATA.kpis.slice(4)));
 }
+function renderTable() {
+  const tbody = document.querySelector('#tableContainer tbody');
+  DATA.tableData.forEach(row => {
+    const tr = document.createElement('tr');
+    const yoySign = row.yoy.startsWith('−')||row.yoy.startsWith('-') ? 'down' : row.yoy.startsWith('+') ? 'up' : '';
+    const momSign = row.mom.startsWith('−')||row.mom.startsWith('-') ? 'down' : row.mom.startsWith('+') ? 'up' : '';
+    const dirColor = row.direction.includes('Alcista') ? 'up' : row.direction.includes('Bajista') ? 'down' : '';
+    tr.innerHTML =
+      '<td class="state-name">' + row.market + '</td>' +
+      '<td>' + row.contract + '</td>' +
+      '<td>' + row.stock + '</td>' +
+      '<td><span class="' + yoySign + '">' + row.yoy + '</span></td>' +
+      '<td><span class="' + momSign + '">' + row.mom + '</span></td>' +
+      '<td style="font-family:\'Syne\',sans-serif;font-weight:700;color:' + (dirColor==='up'?'var(--green)':dirColor==='down'?'var(--red)':'var(--orange)') + ';">' + row.score + '</td>' +
+      '<td><span class="' + dirColor + '">' + row.direction + '</span></td>' +
+      '<td style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--accent);">' + row.signal + '</td>';
+    tbody.appendChild(tr);
+  });
+}
 </script>
 </body>
 </html>
